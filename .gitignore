@@ -4,30 +4,75 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
 venv/
+env/
 ENV/
+.venv
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# IDEs
-.vscode/
+# PyCharm
 .idea/
-*.swp
-*.swo
-*~
 
-# OS
+# VS Code
+.vscode/
+
+# SUMO
+*.sumocfg
+*.xml~
+*.log
+*.warnings
+
+# 训练输出
+outputs/models/*.zip
+outputs/logs/**/events.out.tfevents.*
+outputs/llm_logs/*.json
+outputs/*.png
+outputs/*.npz
+
+# 地图文件 (太大，需要单独下载)
+maps/*.osm
+maps/*.net.xml
+maps/*.rou.xml
+maps/*.edg.xml
+maps/*.nod.xml
+maps/*.typ.xml
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
 .DS_Store
 Thumbs.db
 
-# Project specific
-outputs/logs/
-outputs/models/*.zip
-!outputs/models/ppo_stage1_final.zip
-backup_before_reorganize/
+# Tensorboard
+events.out.tfevents.*
 
-# Temporary files
-*.tmp
-*.log
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 备份
+backup*/
+*_old/
+*_backup/

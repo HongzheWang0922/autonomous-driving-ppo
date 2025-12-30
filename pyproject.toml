@@ -1,19 +1,39 @@
 [project]
-name = "rl-driving"
-version = "0.1.0"
-description = "Reinforcement Learning Autonomous Driving"
+name = "rl-driving-sumo"
+version = "2.0.0"
+description = "Reinforcement Learning Autonomous Driving with SUMO - 4-Stage Curriculum Learning"
 requires-python = ">=3.10"
 dependencies = [
     "stable-baselines3[extra]>=2.0.0",
     "gymnasium>=0.28.0",
-    "highway-env>=1.8.0",
+    "sumolib>=1.18.0",
+    "traci>=1.18.0",
+    "sumo-rl>=1.4.0",
     "tensorboard>=2.13.0",
     "torch>=2.0.0",
     "numpy",
     "matplotlib",
     "opencv-python",
+    "requests",
+    "tqdm",
+    "google-generativeai>=0.3.0",  # LLM训练顾问 (可选)
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
