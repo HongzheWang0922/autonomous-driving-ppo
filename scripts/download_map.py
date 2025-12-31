@@ -41,7 +41,7 @@ def download_osm_map(region_key, output_dir):
         output_dir: 输出目录
     """
     if region_key not in MAP_REGIONS:
-        print(f"❌ 未知的地图区域: {region_key}")
+        print(f"未知的地图区域: {region_key}")
         print(f"可用区域: {', '.join(MAP_REGIONS.keys())}")
         sys.exit(1)
     
@@ -70,12 +70,12 @@ def download_osm_map(region_key, output_dir):
         with open(osm_file, 'wb') as f:
             f.write(response.content)
         
-        print(f"✅ 下载成功: {osm_file} ({len(response.content) / 1024:.1f} KB)")
+        print(f"下载成功: {osm_file} ({len(response.content) / 1024:.1f} KB)")
         return osm_file
     
     except Exception as e:
-        print(f"❌ 下载失败: {e}")
-        print(f"\n💡 备选方案：手动下载")
+        print(f"下载失败: {e}")
+        print(f"\n备选方案：手动下载")
         print(f"1. 访问 https://www.openstreetmap.org/export")
         print(f"2. 输入边界框: {bbox}")
         print(f"3. 导出为 .osm 文件")
@@ -95,7 +95,7 @@ def convert_osm_to_sumo(osm_file, output_dir):
     net_file = output_dir / f"{osm_file.stem}.net.xml"
     
     print(f"\n{'='*60}")
-    print(f"🔄 转换OSM到SUMO格式")
+    print(f"转换OSM到SUMO格式")
     print(f"{'='*60}\n")
     
     # netconvert命令
@@ -119,8 +119,8 @@ def convert_osm_to_sumo(osm_file, output_dir):
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         
         if result.returncode == 0:
-            print(f"✅ 转换成功: {net_file}")
-            print(f"\n📊 SUMO网络统计:")
+            print(f"转换成功: {net_file}")
+            print(f"\nSUMO网络统计:")
             # 简单统计节点和边的数量
             with open(net_file, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -132,13 +132,13 @@ def convert_osm_to_sumo(osm_file, output_dir):
             print(f"   - 红绿灯数: {tls_count}")
             return net_file
         else:
-            print(f"❌ 转换失败:")
+            print(f"转换失败:")
             print(result.stderr)
             sys.exit(1)
     
     except FileNotFoundError:
-        print(f"❌ 错误: 找不到netconvert命令")
-        print(f"\n💡 请确保已安装SUMO:")
+        print(f"错误: 找不到netconvert命令")
+        print(f"\n请确保已安装SUMO:")
         print(f"   - Windows: 从 https://sumo.dlr.de/docs/Downloads.php 下载安装")
         print(f"   - Linux: sudo apt install sumo sumo-tools")
         print(f"   - macOS: brew install sumo")
@@ -146,7 +146,7 @@ def convert_osm_to_sumo(osm_file, output_dir):
         sys.exit(1)
     
     except Exception as e:
-        print(f"❌ 转换失败: {e}")
+        print(f"转换失败: {e}")
         sys.exit(1)
 
 
@@ -161,7 +161,7 @@ def create_route_files(net_file, output_dir):
     output_dir = Path(output_dir)
     
     print(f"\n{'='*60}")
-    print(f"📝 创建路由配置模板")
+    print(f"创建路由配置模板")
     print(f"{'='*60}\n")
     
     # Stage 1: 空路导航（无其他车辆）
@@ -177,7 +177,7 @@ def create_route_files(net_file, output_dir):
     <!-- <vehicle id="ego" type="ego_vehicle" depart="0" color="0,255,0"/> -->
 </routes>
 ''')
-    print(f"✅ Stage 1 路由文件: {stage1_rou.name}")
+    print(f"Stage 1 路由文件: {stage1_rou.name}")
     
     # Stage 2: 加入红绿灯（无其他车辆，但有红绿灯）
     stage2_rou = output_dir / f"{net_file.stem}_stage2.rou.xml"
@@ -188,7 +188,7 @@ def create_route_files(net_file, output_dir):
     <vType id="ego_vehicle" accel="2.6" decel="4.5" sigma="0.0" length="5.0" maxSpeed="15.0" color="0,255,0"/>
 </routes>
 ''')
-    print(f"✅ Stage 2 路由文件: {stage2_rou.name}")
+    print(f"Stage 2 路由文件: {stage2_rou.name}")
     
     # Stage 3: 加入其他车辆
     stage3_rou = output_dir / f"{net_file.stem}_stage3.rou.xml"
@@ -202,7 +202,7 @@ def create_route_files(net_file, output_dir):
     <!-- 背景车辆将在运行时动态生成 -->
 </routes>
 ''')
-    print(f"✅ Stage 3 路由文件: {stage3_rou.name}")
+    print(f"Stage 3 路由文件: {stage3_rou.name}")
     
     # Stage 4: 加入行人 + 增加距离
     stage4_rou = output_dir / f"{net_file.stem}_stage4.rou.xml"
@@ -217,9 +217,9 @@ def create_route_files(net_file, output_dir):
     <!-- 背景车辆和行人将在运行时动态生成 -->
 </routes>
 ''')
-    print(f"✅ Stage 4 路由文件: {stage4_rou.name}")
+    print(f"Stage 4 路由文件: {stage4_rou.name}")
     
-    print(f"\n💡 提示: 路由文件是模板，实际的起点和终点将在训练时动态生成")
+    print(f"\n提示: 路由文件是模板，实际的起点和终点将在训练时动态生成")
 
 
 def main():
@@ -234,9 +234,9 @@ def main():
     
     args = parser.parse_args()
     
-    print(f"\n{'🗺️ '*20}")
+    print(f"\n{'='*40}")
     print(f"SUMO地图下载和转换工具")
-    print(f"{'🗺️ '*20}\n")
+    print(f"{'='*40}\n")
     
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -254,7 +254,7 @@ def main():
     else:
         osm_file = output_dir / f"{args.region}.osm"
         if not osm_file.exists():
-            print(f"❌ 找不到OSM文件: {osm_file}")
+            print(f"找不到OSM文件: {osm_file}")
             sys.exit(1)
         print(f"📂 使用现有OSM文件: {osm_file}")
     
@@ -265,13 +265,13 @@ def main():
     create_route_files(net_file, output_dir)
     
     print(f"\n{'='*60}")
-    print(f"✅ 地图准备完成！")
+    print(f"地图准备完成！")
     print(f"{'='*60}")
     print(f"\n📁 输出文件:")
     print(f"   - OSM原始文件: {osm_file.name}")
     print(f"   - SUMO网络文件: {net_file.name}")
     print(f"   - Stage 1-4 路由模板")
-    print(f"\n🚀 下一步:")
+    print(f"\n下一步:")
     print(f"   1. 使用 sumo-gui {net_file.name} 查看网络")
     print(f"   2. 运行训练: python train_multistage.py --stage 1 --map {args.region}")
     print(f"\n")
@@ -279,4 +279,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

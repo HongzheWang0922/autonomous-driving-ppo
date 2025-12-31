@@ -2,16 +2,16 @@
 
 ## [2.0.0] - 2024-01-15
 
-### 🎉 重大更新：从Highway-env迁移到SUMO
+### 重大更新：从Highway-env迁移到SUMO
 
 本版本完全重构了项目，从highway-env环境迁移到SUMO仿真器，使用真实街道地图进行训练。
 
 ---
 
-### ✨ 新增功能
+### 新增功能
 
 #### 核心环境
-- ✅ **SUMO环境支持** (`envs/sumo_env.py`)
+- **SUMO环境支持** (`envs/sumo_env.py`)
   - 基于SUMO 1.18+的自动驾驶环境
   - 支持真实OpenStreetMap地图
   - 36维观测空间（ego状态、周围车辆、红绿灯、路由）
@@ -19,28 +19,28 @@
   - 完整的奖励函数系统
 
 #### 四阶段课程学习
-- ✅ **Stage 1: 空路导航**
+- **Stage 1: 空路导航**
   - 无其他车辆，学习基础驾驶
   - 目标：80%成功率
   
-- ✅ **Stage 2: 红绿灯遵守**
+- **Stage 2: 红绿灯遵守**
   - 引入红绿灯系统
   - 学习交通规则
   - 目标：80%成功率 + 低闯红灯率
   
-- ✅ **Stage 3: 动态避障**
+- **Stage 3: 动态避障**
   - 15辆背景车辆
   - 学习车辆交互和避障
   - 目标：80%成功率 + 低碰撞率
   
-- ✅ **Stage 4: 综合场景**
+- **Stage 4: 综合场景**
   - 20辆车辆 + 10个行人
   - 长距离路由（500-1500米）
   - 完整的城市驾驶场景
   - 目标：80%成功率 + 综合安全性
 
 #### LLM训练顾问
-- ✅ **Gemini AI集成** (`utils/llm_advisor.py`)
+- **Gemini AI集成** (`utils/llm_advisor.py`)
   - 每10000 episode自动分析训练数据
   - 问题诊断和优化建议
   - 奖励函数和超参数调整建议
@@ -49,7 +49,7 @@
   - 可选启用（`--llm --llm-api-key`）
 
 #### 地图工具
-- ✅ **地图下载脚本** (`scripts/download_map.py`)
+- **地图下载脚本** (`scripts/download_map.py`)
   - 从OpenStreetMap下载真实街道数据
   - 自动转换为SUMO格式（netconvert）
   - 支持3个预定义区域：
@@ -59,14 +59,14 @@
   - 自动生成Stage 1-4路由模板
 
 #### 训练和评估
-- ✅ **新训练脚本** (`scripts/train_sumo.py`)
+- **新训练脚本** (`scripts/train_sumo.py`)
   - 支持四阶段课程学习
   - 自动从前一阶段加载模型
   - 集成LLM训练顾问
   - Episode统计和Tensorboard记录
   - 定期评估和Checkpoint保存
   
-- ✅ **新评估脚本** (`scripts/evaluate_sumo.py`)
+- **新评估脚本** (`scripts/evaluate_sumo.py`)
   - 详细的评估指标
   - 成功率、碰撞率统计
   - 红绿灯违规统计
@@ -74,47 +74,47 @@
   - 可选SUMO-GUI可视化
 
 #### 文档
-- ✅ **完整重写README** (`README.md`)
+- **完整重写README** (`README.md`)
   - 四阶段训练详细说明
   - LLM训练顾问使用指南
   - 完整的安装和使用说明
   - 常见问题解答
   
-- ✅ **快速开始指南** (`QUICKSTART.md`)
+- **快速开始指南** (`QUICKSTART.md`)
   - 30分钟上手指南
   - 简化的安装步骤
   
-- ✅ **详细安装指南** (`INSTALL.md`)
+- **详细安装指南** (`INSTALL.md`)
   - 跨平台安装说明
   - 故障排除
   
-- ✅ **迁移指南** (`MIGRATION_GUIDE.md`)
+- **迁移指南** (`MIGRATION_GUIDE.md`)
   - Highway-env到SUMO的迁移说明
   - API变化对比
   - 旧版兼容性说明
 
 ---
 
-### 🔄 更改
+### 更改
 
 #### 依赖更新
-- ✅ 添加 `sumolib >= 1.18.0`
-- ✅ 添加 `traci >= 1.18.0`
-- ✅ 添加 `sumo-rl >= 1.4.0`
-- ✅ 添加 `google-generativeai >= 0.3.0` (LLM顾问)
-- ✅ 更新 `environment.yml`
-- ✅ 更新 `pyproject.toml`
-- ✅ 新增 `requirements.txt`
+- 添加 `sumolib >= 1.18.0`
+- 添加 `traci >= 1.18.0`
+- 添加 `sumo-rl >= 1.4.0`
+- 添加 `google-generativeai >= 0.3.0` (LLM顾问)
+- 更新 `environment.yml`
+- 更新 `pyproject.toml`
+- 新增 `requirements.txt`
 
 #### 配置文件
-- ✅ 更新 `.gitignore`
+- 更新 `.gitignore`
   - 忽略SUMO临时文件
   - 忽略地图文件（需单独下载）
   - 忽略LLM日志
 
 ---
 
-### 🗑️ 弃用
+### 弃用
 
 以下文件保留但标记为弃用：
 - `envs/intersection_env.py` - Highway-env环境
@@ -126,7 +126,7 @@
 
 ---
 
-### 📊 性能对比
+### 性能对比
 
 | 指标 | v1.0 (Highway-env) | v2.0 (SUMO) |
 |------|-------------------|-------------|
@@ -136,22 +136,22 @@
 | 并行环境 | 24 | 8-16 |
 | Stage 1时间 | ~4小时 | ~8小时 |
 | 总训练时间 | ~20小时 | ~70小时 |
-| LLM辅助 | ❌ | ✅ |
-| 红绿灯 | ❌ | ✅ |
-| 行人 | ❌ | ✅ |
-| 真实度 | ⭐⭐ | ⭐⭐⭐⭐⭐ |
+| LLM辅助 | 否 | 是 |
+| 红绿灯 | 否 | 是 |
+| 行人 | 否 | 是 |
+| 真实度 | 2星 | 5星 |
 
 ---
 
-### 🐛 修复
+### 修复
 
-- ✅ 解决Highway-env的Length=1 bug（旧环境）
-- ✅ 改进碰撞检测逻辑
-- ✅ 优化奖励函数平衡性
+- 解决Highway-env的Length=1 bug（旧环境）
+- 改进碰撞检测逻辑
+- 优化奖励函数平衡性
 
 ---
 
-### 📦 文件结构
+### 文件结构
 
 ```
 新增文件:
@@ -179,7 +179,7 @@
 
 ---
 
-### 🚀 升级指南
+### 升级指南
 
 从v1.0升级到v2.0：
 
@@ -209,7 +209,7 @@
 
 ---
 
-### 💡 使用建议
+### 使用建议
 
 1. **首次使用**: 参考 [QUICKSTART.md](QUICKSTART.md)
 2. **安装问题**: 参考 [INSTALL.md](INSTALL.md)
@@ -218,7 +218,7 @@
 
 ---
 
-### 🙏 致谢
+### 致谢
 
 - SUMO团队提供优秀的交通仿真平台
 - OpenStreetMap提供免费地图数据
@@ -238,4 +238,5 @@
 ---
 
 **完整更新内容请查看**: [README.md](README.md)
+
 

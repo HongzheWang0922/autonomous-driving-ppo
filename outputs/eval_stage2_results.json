@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "n_episodes": 100,
+  "success_rate": 89.0,
+  "collision_rate": 0.0,
+  "mean_reward": 202.36586901232076,
+  "std_reward": 189.0131422845944,
+  "min_reward": -153.949951171875,
+  "max_reward": 1353.8564403718785,
+  "mean_length": 390.93,
+  "std_length": 311.4157110680192,
+  "mean_progress": 90.06654936727396,
+  "mean_red_light_violations": 0.04,
+  "total_red_light_violations": 4
+}

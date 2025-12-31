@@ -17,7 +17,7 @@ class DriveBackupCallback(BaseCallback):
             self.backup_count += 1
             if self.verbose > 0:
                 print(f"\n{'='*50}")
-                print(f"🔄 自动备份 #{self.backup_count}")
+                print(f"自动备份 #{self.backup_count}")
                 print(f"{'='*50}")
 
             try:
@@ -31,7 +31,7 @@ class DriveBackupCallback(BaseCallback):
                     print(f"{'='*50}\n")
 
             except Exception as e:
-                print(f"⚠️ 备份失败: {e}")
+                print(f"备份失败: {e}")
 
         return True
 

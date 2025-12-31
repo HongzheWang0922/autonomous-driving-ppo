@@ -113,7 +113,7 @@ class EpisodeStatCallback(BaseCallback):
                         collision_rate = np.mean(self.recent_collisions) * 100
                         
                         print(f"\n{'='*60}")
-                        print(f"📊 Episode {self.episode_count} | 步数 {self.num_timesteps:,}")
+                        print(f"Episode {self.episode_count} | 步数 {self.num_timesteps:,}")
                         print(f"   最近100个episode:")
                         print(f"   - 平均Reward: {mean_reward:.2f}")
                         print(f"   - 成功率: {success_rate:.1f}%")
@@ -169,41 +169,46 @@ class EvalCallback(BaseCallback):
             self.last_eval_step = self.num_timesteps
             self.eval_count += 1
             
-            print(f"\n{'🎯'*30}")
+            print(f"\n{'='*30}")
             print(f"评估 #{self.eval_count} (步数: {self.num_timesteps:,})")
-            print(f"{'🎯'*30}\n")
+            print(f"{'='*30}\n")
             
             episode_rewards = []
             episode_successes = []
             episode_collisions = []
+            episode_red_lights = []
             
             for ep in range(self.n_eval_episodes):
                 obs, _ = self.eval_env.reset()
                 done = False
                 ep_reward = 0
-                
+                ep_steps = 0
                 while not done:
                     action, _ = self.model.predict(obs, deterministic=True)
                     obs, reward, terminated, truncated, info = self.eval_env.step(action)
                     done = terminated or truncated
                     ep_reward += reward
-                
+                    ep_steps += 1
                 episode_rewards.append(ep_reward)
                 episode_successes.append(float(info.get("goal_reached", False)))
                 episode_collisions.append(float(info.get("collision", False)))
-                
-                print(f"  Episode {ep+1}: Reward={ep_reward:.2f}, "
+                episode_red_lights.append(info.get("red_light_violations", 0))
+                print(f"  Episode {ep+1}: Reward={ep_reward:.2f}, Steps={ep_steps}/{info.get('max_steps', '?')}, "
                       f"Success={info.get('goal_reached', False)}, "
-                      f"Collision={info.get('collision', False)}")
+                      f"Collision={info.get('collision', False)}, "
+                      f"RedLight={info.get('red_light_violations', 0)}/{info.get('route_traffic_lights', '?')}")
             
             mean_reward = np.mean(episode_rewards)
             success_rate = np.mean(episode_successes) * 100
             collision_rate = np.mean(episode_collisions) * 100
+            total_red_lights = sum(episode_red_lights)
+            episodes_with_violations = sum(1 for r in episode_red_lights if r > 0)
             
-            print(f"\n📊 评估结果:")
+            print(f"\n评估结果:")
             print(f"   - 平均Reward: {mean_reward:.2f}")
             print(f"   - 成功率: {success_rate:.1f}%")
             print(f"   - 碰撞率: {collision_rate:.1f}%")
+            print(f"   - 闯红灯: {total_red_lights}次 ({episodes_with_violations}/{self.n_eval_episodes}个episode违规)")
             print(f"{'='*60}\n")
             
             # 记录到Tensorboard
@@ -240,17 +245,8 @@ def make_vec_env(stage: int, map_name: str, n_envs: int, start_method: str = 'sp
         return _init
     
     # 尝试使用SubprocVecEnv，如果失败则降级到DummyVecEnv
-    try:
-        if n_envs > 1:
-            env = SubprocVecEnv([make_env(i) for i in range(n_envs)], start_method=start_method)
-        else:
-            env = DummyVecEnv([make_env(0)])
-        print(f"✅ 创建了 {n_envs} 个并行环境")
-    except Exception as e:
-        print(f"⚠️  SubprocVecEnv失败，降级到DummyVecEnv: {e}")
-        n_envs = min(n_envs, 4)
-        env = DummyVecEnv([make_env(i) for i in range(n_envs)])
-        print(f"✅ 创建了 {n_envs} 个串行环境")
+    env = DummyVecEnv([make_env(i) for i in range(n_envs)])
+    print(f"创建了 {n_envs} 个环境 (DummyVecEnv)")
     
     return env
 
@@ -273,7 +269,7 @@ def create_or_load_model(
     Returns:
         PPO模型
     """
-    tensorboard_log = f"../outputs/logs/stage{stage}"
+    tensorboard_log = str(REPO_DIR / "outputs" / "logs" / f"stage{stage}")
     
     if from_checkpoint:
         # 从指定checkpoint加载
@@ -304,10 +300,10 @@ def create_or_load_model(
     
     else:
         # Stage 2-4: 从前一阶段加载
-        prev_model_path = f"../outputs/models/best_stage{stage-1}/ppo_final.zip"
+        prev_model_path = str(REPO_DIR / "outputs" / "models" / f"best_stage{stage-1}" / "ppo_final.zip")
         
         if not Path(prev_model_path).exists():
-            print(f"⚠️  找不到前一阶段模型: {prev_model_path}")
+            print(f"找不到前一阶段模型: {prev_model_path}")
             print(f"   创建新模型...")
             model = PPO(
                 "MlpPolicy",
@@ -380,7 +376,7 @@ def main():
     
     # 打印配置
     print(f"\n{'='*60}")
-    print(f"🚀 SUMO多阶段训练")
+    print(f"SUMO多阶段训练")
     print(f"{'='*60}")
     print(f"阶段: Stage {args.stage}")
     print(f"地图: {args.map}")
@@ -392,7 +388,7 @@ def main():
     
     # 检查SUMO_HOME
     if 'SUMO_HOME' not in os.environ:
-        print("❌ 错误: 未设置环境变量 SUMO_HOME")
+        print("错误: 未设置环境变量 SUMO_HOME")
         print("   请设置SUMO安装路径，例如:")
         print("   Windows: set SUMO_HOME=C:\\Program Files (x86)\\Eclipse\\Sumo")
         print("   Linux: export SUMO_HOME=/usr/share/sumo")
@@ -401,15 +397,15 @@ def main():
     # 检查地图文件
     map_file = REPO_DIR / "maps" / f"{args.map}.net.xml"
     if not map_file.exists():
-        print(f"❌ 错误: 找不到地图文件 {map_file}")
+        print(f"错误: 找不到地图文件 {map_file}")
         print(f"   请先运行: python scripts/download_map.py --region {args.map}")
         sys.exit(1)
     
     # 创建输出目录
     output_dirs = [
-        f"../outputs/models/best_stage{args.stage}",
-        f"../outputs/logs/stage{args.stage}",
-        "../outputs/llm_logs",
+        REPO_DIR / "outputs" / "models" / f"best_stage{args.stage}",
+        REPO_DIR / "outputs" / "logs" / f"stage{args.stage}",
+        REPO_DIR / "outputs" / "llm_logs",
     ]
     for d in output_dirs:
         Path(d).mkdir(parents=True, exist_ok=True)
@@ -458,7 +454,7 @@ def main():
     
     checkpoint_callback = CheckpointCallback(
         save_freq=args.checkpoint_freq,
-        save_path=f"../outputs/models/best_stage{args.stage}",
+        save_path=str(REPO_DIR / "outputs" / "models" / f"best_stage{args.stage}"),
         name_prefix=f"ppo_stage{args.stage}",
         verbose=1
     )
@@ -466,11 +462,11 @@ def main():
     callbacks = CallbackList([episode_callback, eval_callback, checkpoint_callback])
     
     # 打印提示
-    print(f"\n💡 监控训练:")
+    print(f"\n监控训练:")
     print(f"   tensorboard --logdir {REPO_DIR}/outputs/logs --reload_interval 5")
     
     if llm_advisor:
-        print(f"\n💡 LLM训练顾问:")
+        print(f"\nLLM训练顾问:")
         print(f"   - 每10000 episode分析一次")
         print(f"   - 日志保存到: {REPO_DIR}/outputs/llm_logs/")
     
@@ -487,17 +483,17 @@ def main():
             reset_num_timesteps=reset_timesteps
         )
     except KeyboardInterrupt:
-        print(f"\n⚠️  训练被中断")
+        print(f"\n训练被中断")
     except Exception as e:
-        print(f"\n❌ 训练失败: {e}")
+        print(f"\n训练失败: {e}")
         import traceback
         traceback.print_exc()
     
     # 保存最终模型
-    final_model_path = f"../outputs/models/best_stage{args.stage}/ppo_final.zip"
+    final_model_path = str(REPO_DIR / "outputs" / "models" / f"best_stage{args.stage}" / "ppo_final.zip")
     model.save(final_model_path)
-    print(f"\n✅ 训练完成！")
-    print(f"✅ 最终模型已保存: {final_model_path}")
+    print(f"\n训练完成！")
+    print(f"最终模型已保存: {final_model_path}")
     
     # LLM顾问摘要
     if llm_advisor:
@@ -517,7 +513,7 @@ def main():
     if args.stage < 4:
         print(f"  python scripts/train_sumo.py --stage {args.stage + 1}")
     else:
-        print(f"  🎉 恭喜！已完成所有训练阶段！")
+        print(f"  恭喜！已完成所有训练阶段！")
     print(f"\n")
 
 
@@ -530,4 +526,5 @@ if __name__ == "__main__":
         pass
     
     main()
+
 

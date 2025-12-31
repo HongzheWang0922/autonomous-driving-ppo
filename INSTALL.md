@@ -160,7 +160,7 @@ print('TraCI: OK')
 import torch
 print(f'PyTorch: {torch.__version__}')
 
-print('\\n✅ Python环境正常！')
+print('\\nPython环境正常！')
 "
 
 # 测试SUMO
@@ -174,9 +174,9 @@ if 'SUMO_HOME' in os.environ:
     sys.path.append(tools)
     import sumolib
     print(f'sumolib: OK')
-    print('\\n✅ SUMO环境正常！')
+    print('\\nSUMO环境正常！')
 else:
-    print('\\n❌ 请设置SUMO_HOME环境变量')
+    print('\\n请设置SUMO_HOME环境变量')
 "
 ```
 
@@ -291,4 +291,5 @@ pip install --upgrade stable-baselines3 gymnasium torch
 ---
 
 安装完成后，继续查看 [快速开始指南](QUICKSTART.md)
+
 

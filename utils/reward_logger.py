@@ -49,7 +49,7 @@ class RealtimeMonitorCallback(BaseCallback):
         fps = self.n_calls / elapsed_time if elapsed_time > 0 else 0
 
         print(f"\n{'='*70}")
-        print(f"📊 训练进度: {self.n_calls:,} steps | 耗时: {elapsed_time/60:.1f} min | FPS: {fps:.1f}")
+        print(f"训练进度: {self.n_calls:,} steps | 耗时: {elapsed_time/60:.1f} min | FPS: {fps:.1f}")
         print(f"{'='*70}")
 
         # Loss信息
@@ -58,7 +58,7 @@ class RealtimeMonitorCallback(BaseCallback):
                 if hasattr(self.model.logger, 'name_to_value'):
                     metrics = self.model.logger.name_to_value
 
-                    print("📉 Loss指标:")
+                    print("Loss指标:")
                     if 'train/loss' in metrics:
                         print(f"   Total Loss: {metrics['train/loss']:.4f}")
                     if 'train/policy_gradient_loss' in metrics:
@@ -82,7 +82,7 @@ class RealtimeMonitorCallback(BaseCallback):
             std_reward = np.std(recent_rewards)
             mean_length = np.mean(recent_lengths)
 
-            print(f"\n🎯 性能指标 (最近{recent_n}个episodes):")
+            print(f"\n性能指标 (最近{recent_n}个episodes):")
             print(f"   平均Reward: {mean_reward:.2f} ± {std_reward:.2f}")
             print(f"   最高Reward: {max(self.episode_rewards[-recent_n:]):.2f}")
             print(f"   平均长度: {mean_length:.1f} steps")
@@ -99,7 +99,7 @@ class RealtimeMonitorCallback(BaseCallback):
 
             if self.last_mean_reward > 0:
                 change = mean_reward - self.last_mean_reward
-                arrow = "📈" if change > 0 else "📉" if change < 0 else "➡️"
+                arrow = "↑" if change > 0 else "↓" if change < 0 else "→"
                 print(f"   趋势: {arrow} {change:+.2f}")
 
             self.last_mean_reward = mean_reward

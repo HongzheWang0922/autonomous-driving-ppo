@@ -142,7 +142,7 @@ def evaluate_model(
 def print_results(results: Dict):
     """打印评估结果"""
     print(f"\n{'='*60}")
-    print(f"📊 评估结果 - Stage {results['stage']}")
+    print(f"评估结果 - Stage {results['stage']}")
     print(f"{'='*60}\n")
     
     print(f"成功率指标:")
@@ -166,13 +166,13 @@ def print_results(results: Dict):
     
     # 判断是否可以进入下一阶段
     if results['success_rate'] >= 80.0:
-        print(f"🎉 成功率 >= 80%，可以进入下一阶段！")
+        print(f"成功率 >= 80%，可以进入下一阶段！")
         if results['stage'] < 4:
             print(f"   运行: python scripts/train_sumo.py --stage {results['stage'] + 1}")
         else:
             print(f"   🏆 恭喜！已完成所有训练阶段！")
     else:
-        print(f"⚠️  成功率 < 80%，建议继续训练当前阶段")
+        print(f"成功率 < 80%，建议继续训练当前阶段")
         print(f"   或调整超参数/奖励函数")
     
     print(f"{'='*60}\n")
@@ -213,24 +213,24 @@ def main():
     if args.model is None:
         model_path = REPO_DIR / f"outputs/models/best_stage{args.stage}/ppo_final.zip"
         if not model_path.exists():
-            print(f"❌ 找不到模型: {model_path}")
+            print(f"找不到模型: {model_path}")
             print(f"   请指定模型路径: --model path/to/model.zip")
             sys.exit(1)
     else:
         model_path = Path(args.model)
         if not model_path.exists():
-            print(f"❌ 找不到模型: {model_path}")
+            print(f"找不到模型: {model_path}")
             sys.exit(1)
     
     # 检查SUMO_HOME
     if 'SUMO_HOME' not in os.environ:
-        print("❌ 错误: 未设置环境变量 SUMO_HOME")
+        print("错误: 未设置环境变量 SUMO_HOME")
         sys.exit(1)
     
     # 检查地图文件
     map_file = REPO_DIR / "maps" / f"{args.map}.net.xml"
     if not map_file.exists():
-        print(f"❌ 找不到地图文件: {map_file}")
+        print(f"找不到地图文件: {map_file}")
         print(f"   请先运行: python scripts/download_map.py --region {args.map}")
         sys.exit(1)
     
@@ -258,4 +258,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

@@ -67,18 +67,18 @@ class LLMTrainingAdvisor:
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key)
                 self.model = genai.GenerativeModel('gemini-pro')
-                print(f"✅ LLM训练顾问已启用 (Gemini API)")
+                print(f"LLM训练顾问已启用 (Gemini API)")
                 print(f"   - Stage: {stage}")
                 print(f"   - 调用频率: 每{call_frequency} episode")
                 print(f"   - 日志目录: {output_dir}")
             except ImportError:
-                print(f"❌ 请安装 google-generativeai: pip install google-generativeai")
+                print(f"请安装 google-generativeai: pip install google-generativeai")
                 self.enabled = False
             except Exception as e:
-                print(f"❌ 初始化Gemini失败: {e}")
+                print(f"初始化Gemini失败: {e}")
                 self.enabled = False
         else:
-            print(f"ℹ️  LLM训练顾问未启用")
+            print(f"LLM训练顾问未启用")
     
     def record_episode(self, info: Dict):
         """
@@ -133,7 +133,7 @@ class LLMTrainingAdvisor:
             self.last_call_date = today
         
         if self.calls_today >= self.max_calls_per_day:
-            print(f"⚠️  已达到今日LLM调用上限 ({self.max_calls_per_day})")
+            print(f"已达到今日LLM调用上限 ({self.max_calls_per_day})")
             return False
         
         # 至少需要100个episode的数据
@@ -193,7 +193,7 @@ class LLMTrainingAdvisor:
             return advice
         
         except Exception as e:
-            print(f"❌ LLM调用失败: {e}")
+            print(f"LLM调用失败: {e}")
             return None
     
     def _compute_statistics(self) -> Dict:
@@ -322,9 +322,9 @@ class LLMTrainingAdvisor:
         try:
             with open(log_file, 'w', encoding='utf-8') as f:
                 json.dump(advice, f, indent=2, ensure_ascii=False)
-            print(f"📝 日志已保存: {log_file}")
+            print(f"日志已保存: {log_file}")
         except Exception as e:
-            print(f"❌ 保存日志失败: {e}")
+            print(f"保存日志失败: {e}")
     
     def _print_advice(self, advice: Dict):
         """打印建议到控制台"""
@@ -365,17 +365,17 @@ def create_llm_advisor(
     """
     # Stage 1不使用LLM顾问
     if stage == 1:
-        print("ℹ️  Stage 1 不使用LLM训练顾问")
+        print("Stage 1 不使用LLM训练顾问")
         return None
     
     # 如果未启用，返回None
     if not enabled:
-        print("ℹ️  LLM训练顾问未启用")
+        print("LLM训练顾问未启用")
         return None
     
     # 检查API Key
     if not api_key:
-        print("⚠️  未提供Gemini API Key，LLM训练顾问未启用")
+        print("未提供Gemini API Key，LLM训练顾问未启用")
         print("   使用 --llm --llm-api-key YOUR_KEY 启用")
         return None
     
@@ -388,7 +388,7 @@ def create_llm_advisor(
         )
         return advisor
     except Exception as e:
-        print(f"❌ 创建LLM训练顾问失败: {e}")
+        print(f"创建LLM训练顾问失败: {e}")
         return None
 
 
@@ -432,8 +432,9 @@ if __name__ == "__main__":
     advice = advisor.analyze_and_advise(current_episode=100, training_steps=50000)
     
     if advice:
-        print("\n✅ 测试成功！")
+        print("\n测试成功！")
         print(advisor.get_summary())
     else:
-        print("\n❌ 测试失败")
+        print("\n测试失败")
+
 

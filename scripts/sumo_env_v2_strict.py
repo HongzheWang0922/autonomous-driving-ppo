@@ -230,9 +230,50 @@ class SUMODrivingEnv(gym.Env):
         try:
             traci.start(self.sumo_cmd, label=self.connection_label)
             self.sumo_running = True
+            self._setup_traffic_lights()  # 初始化红绿灯
         except Exception as e:
             print(f"启动SUMO失败: {e}")
             raise
+    
+    def _setup_traffic_lights(self):
+        """给所有红绿灯设置正确的红绿周期"""
+        self._ensure_connection()
+        
+        try:
+            tls_ids = traci.trafficlight.getIDList()
+            
+            for tls_id in tls_ids:
+                try:
+                    state = traci.trafficlight.getRedYellowGreenState(tls_id)
+                    num_links = len(state)
+                    
+                    if num_links == 0:
+                        continue
+                    
+                    # 创建简单的两相位：一半绿一半红，然后交换
+                    half = max(1, num_links // 2)
+                    phase1_state = 'G' * half + 'r' * (num_links - half)
+                    phase2_state = 'r' * half + 'G' * (num_links - half)
+                    
+                    # 随机起始相位，让不同红绿灯不同步
+                    import random
+                    start_phase = random.randint(0, 3)
+                    
+                    phases = [
+                        traci.trafficlight.Phase(25, phase1_state),   # 25秒绿灯
+                        traci.trafficlight.Phase(4, 'y' * num_links), # 4秒黄灯
+                        traci.trafficlight.Phase(25, phase2_state),   # 25秒红灯
+                        traci.trafficlight.Phase(4, 'y' * num_links), # 4秒黄灯
+                    ]
+                    
+                    logic = traci.trafficlight.Logic('custom', 0, start_phase, phases)
+                    traci.trafficlight.setProgramLogic(tls_id, logic)
+                    
+                except Exception as e:
+                    continue
+                    
+        except Exception as e:
+            print(f"红绿灯初始化警告: {e}")
     
     def _close_sumo(self):
         if self.sumo_running:
@@ -1309,7 +1350,6 @@ if __name__ == "__main__":
     print("   - 红绿灯: 4维")
     print("   - 路由: 2维")
     print("\n动态背景车: 50-150m生成, >200m消失")
-    print("动态行人: 30-80m生成, >100m消失")
+    print("🚶 动态行人: 30-80m生成, >100m消失")
     print("\n使用前请先下载地图:")
     print("   python scripts/download_map.py --region sf_mission")
-
