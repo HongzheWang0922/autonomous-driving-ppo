@@ -170,7 +170,7 @@ def print_results(results: Dict):
         if results['stage'] < 4:
             print(f"   运行: python scripts/train_sumo.py --stage {results['stage'] + 1}")
         else:
-            print(f"   🏆 恭喜！已完成所有训练阶段！")
+            print(f"   恭喜！已完成所有训练阶段！")
     else:
         print(f"成功率 < 80%，建议继续训练当前阶段")
         print(f"   或调整超参数/奖励函数")

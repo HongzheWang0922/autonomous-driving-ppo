@@ -428,7 +428,7 @@ def main():
     eval_env = Monitor(eval_env)
     
     # 创建或加载模型
-    print(f"\n🤖 准备模型...")
+    print(f"\n准备模型...")
     model, reset_timesteps = create_or_load_model(
         train_env,
         args.stage,

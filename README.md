@@ -15,10 +15,10 @@
 ### 主要特性
 
 - **真实地图**: 使用San Francisco或Manhattan真实街道网络（OpenStreetMap）
-- 📚 **四阶段课程学习**: 从空路导航到复杂场景渐进式训练
-- 🤖 **LLM训练顾问**: 可选的Gemini AI自动分析训练问题并提供建议
+- **四阶段课程学习**: 从空路导航到复杂场景渐进式训练
+- **LLM训练顾问**: 可选的Gemini AI自动分析训练问题并提供建议
 - **SUMO仿真**: 高精度的交通仿真，支持红绿灯、行人等
-- ⚡ **并行训练**: 支持8-16个并行环境，充分利用CPU资源
+- **并行训练**: 支持8-16个并行环境，充分利用CPU资源
 - **完整监控**: Tensorboard实时监控 + LLM定期诊断
 
 ---
@@ -42,7 +42,7 @@ python scripts/train_sumo.py --stage 1 --timesteps 500000
 
 ---
 
-### Stage 2: 红绿灯遵守 🚦
+### Stage 2: 红绿灯遵守
 **目标**: 学习遵守交通信号
 
 - 引入红绿灯系统
@@ -92,7 +92,7 @@ python scripts/train_sumo.py --stage 4 --timesteps 1500000 \
 
 ---
 
-## 🤖 LLM训练顾问
+## LLM训练顾问
 
 从Stage 2开始，可选启用**Gemini LLM训练顾问**，自动分析训练数据并提供优化建议。
 
@@ -516,7 +516,7 @@ LLM建议仅供参考，需要结合实际情况判断。
 
 ---
 
-## 📈 预期训练时间
+## 预期训练时间
 
 基于 Ryzen 5600 + 32GB RAM + 16并行环境：
 
@@ -531,7 +531,7 @@ LLM建议仅供参考，需要结合实际情况判断。
 
 ---
 
-## 📚 参考资料
+## 参考资料
 
 ### 论文
 - [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)

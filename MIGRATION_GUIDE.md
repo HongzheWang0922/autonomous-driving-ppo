@@ -289,7 +289,7 @@ python scripts/train_sumo.py --stage 1 --gui --n-envs 1
 
 ---
 
-## 📈 性能对比
+## 性能对比
 
 基于相同硬件 (Ryzen 5600 + 32GB RAM):
 
@@ -304,7 +304,7 @@ python scripts/train_sumo.py --stage 1 --gui --n-envs 1
 
 ---
 
-## 📚 延伸阅读
+## 延伸阅读
 
 - [SUMO Documentation](https://sumo.dlr.de/docs/)
 - [SUMO-RL](https://github.com/LucasAlegre/sumo-rl)

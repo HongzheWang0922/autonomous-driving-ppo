@@ -86,7 +86,7 @@ if __name__ == "__main__":
             # 结果
             success = "成功" if info.get('goal_reached', False) else "失败"
             collision = "💥 碰撞" if info.get('collision', False) else ""
-            red_light = f"🚦 闯红灯:{info.get('red_light_violations', 0)}"
+            red_light = f"闯红灯:{info.get('red_light_violations', 0)}"
             
             print(f"   结果: {success} {collision}")
             print(f"   Reward: {ep_reward:.2f}, 步数: {ep_steps}")

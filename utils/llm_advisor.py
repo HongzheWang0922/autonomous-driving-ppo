@@ -157,7 +157,7 @@ class LLMTrainingAdvisor:
             return None
         
         print(f"\n{'='*60}")
-        print(f"🤖 调用LLM训练顾问 (Episode {current_episode})")
+        print(f"调用LLM训练顾问 (Episode {current_episode})")
         print(f"{'='*60}\n")
         
         # 准备统计数据
@@ -328,9 +328,9 @@ class LLMTrainingAdvisor:
     
     def _print_advice(self, advice: Dict):
         """打印建议到控制台"""
-        print(f"\n{'🤖'*30}")
+        print(f"\n{'='*30}")
         print(f"LLM训练顾问建议 (Episode {advice['episode']})")
-        print(f"{'🤖'*30}\n")
+        print(f"{'='*30}\n")
         print(advice['llm_response'])
         print(f"\n{'='*60}\n")
     
