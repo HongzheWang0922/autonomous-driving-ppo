@@ -48,13 +48,6 @@ outputs/llm_logs/*.json
 outputs/*.png
 outputs/*.npz
 
-# 地图文件 (太大，需要单独下载)
-maps/*.osm
-maps/*.net.xml
-maps/*.rou.xml
-maps/*.edg.xml
-maps/*.nod.xml
-maps/*.typ.xml
 
 # 临时文件
 *.tmp

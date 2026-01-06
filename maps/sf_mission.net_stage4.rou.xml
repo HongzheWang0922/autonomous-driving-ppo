@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Stage 4: 综合场景 - ego车辆 + 其他车辆 + 行人 + 红绿灯 + 长距离 -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="ego_vehicle" accel="2.6" decel="4.5" sigma="0.0" length="5.0" maxSpeed="15.0" color="0,255,0"/>
+    <vType id="background_vehicle" accel="2.6" decel="4.5" sigma="0.5" length="5.0" maxSpeed="13.89" color="255,255,0"/>
+    <vType id="pedestrian" vClass="pedestrian" width="0.8" length="0.8" maxSpeed="1.5" color="255,0,0"/>
+    
+    <!-- 背景车辆和行人将在运行时动态生成 -->
+</routes>
