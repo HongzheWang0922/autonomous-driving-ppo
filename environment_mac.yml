@@ -1,0 +1,32 @@
+name: rl-driving-sumo
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - matplotlib
+  - requests
+  - pip:
+    # 强化学习框架
+    - stable-baselines3[extra]>=2.0.0
+    - gymnasium>=0.28.0
+    
+    # SUMO相关
+    - sumolib>=1.18.0
+    - traci>=1.18.0
+    - sumo-rl>=1.4.0
+    
+    # 深度学习 - M4 用 MPS 加速
+    - torch>=2.0.0
+    
+    # 可视化和日志
+    - tensorboard>=2.13.0
+    - opencv-python-headless  # Mac 上用 headless 版本更稳定
+    
+    # LLM集成 (可选)
+    - google-generativeai>=0.3.0
+    
+    # 工具
+    - tqdm

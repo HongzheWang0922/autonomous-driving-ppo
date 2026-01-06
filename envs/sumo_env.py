@@ -1,6 +1,16 @@
 """
-基于SUMO的自动驾驶环境 - 支持四阶段课程学习 (V2.1 - 红绿灯修复版)
+基于SUMO的自动驾驶环境 - 支持四阶段课程学习 (V2.3 - 背景车辆分布优化版)
 使用真实美国街道地图，支持从简单到复杂的渐进式学习
+
+V2.3 修复内容：
+- 扩大背景车生成范围：2-3跳邻居边，让车分布到更多平行道路
+- 限制同边车辆数：每条边最多3辆，避免堆积
+- 降低ego路线生成概率：70%在其他路，30%在ego路线，增加转弯避障场景
+
+V2.2 修复内容：
+- 修复背景车辆堆积问题：先创建路由再添加车辆，避免"幽灵车"
+- 移除到达终点的背景车辆
+- 降低车辆生成频率：每5步最多生成1辆
 
 V2.1 修复内容：
 - 扩大红绿灯观测距离（200米分段归一化）
@@ -40,7 +50,7 @@ import sumolib
 
 class SUMODrivingEnv(gym.Env):
     """
-    基于SUMO的自动驾驶环境 V2.1 (红绿灯修复版，103维)
+    基于SUMO的自动驾驶环境 V2.3 (背景车辆分布优化版，103维)
     
     观测空间 (103维):
         - 自车状态 [0:8]: 速度、加速度、位置x/y、航向cos/sin、车道偏移、转向角
@@ -199,7 +209,7 @@ class SUMODrivingEnv(gym.Env):
             dtype=np.float32
         )
         
-        print(f"📐 观测空间维度: {obs_dim} (V2.1修复版)")
+        print(f"📐 观测空间维度: {obs_dim} (V2.3优化版)")
         print(f"   - 自车状态: {self.EGO_DIM}")
         print(f"   - 周围车辆: {self.NUM_VEHICLES} × {self.VEHICLE_DIM} = {self.NUM_VEHICLES * self.VEHICLE_DIM}")
         print(f"   - 行人: {self.NUM_PEDESTRIANS} × {self.PEDESTRIAN_DIM} = {self.NUM_PEDESTRIANS * self.PEDESTRIAN_DIM}")
@@ -338,20 +348,42 @@ class SUMODrivingEnv(gym.Env):
         traci.vehicle.setSpeedMode(self.ego_id, 0)
         traci.vehicle.setLaneChangeMode(self.ego_id, 0)
     
-    def _get_nearby_edges(self) -> List[str]:
-        """获取自车路线附近的所有边"""
+    def _get_nearby_edges(self, hops: int = 2) -> List[str]:
+        """
+        获取自车路线附近的所有边（V2.3：扩大到多跳邻居）
+        
+        Args:
+            hops: 邻居跳数，默认2跳
+        
+        Returns:
+            nearby_edges: 附近边的列表
+        """
         nearby_edges = set(self.route_edges)
-        for edge_id in self.route_edges:
-            try:
-                edge = self.net.getEdge(edge_id)
-                for neighbor in edge.getOutgoing():
-                    if neighbor.allows("passenger"):
-                        nearby_edges.add(neighbor.getID())
-                for neighbor in edge.getIncoming():
-                    if neighbor.allows("passenger"):
-                        nearby_edges.add(neighbor.getID())
-            except:
-                pass
+        current_level = set(self.route_edges)
+        
+        for _ in range(hops):
+            next_level = set()
+            for edge_id in current_level:
+                try:
+                    edge = self.net.getEdge(edge_id)
+                    for neighbor in edge.getOutgoing():
+                        if neighbor.allows("passenger"):
+                            neighbor_id = neighbor.getID()
+                            if neighbor_id not in nearby_edges:
+                                next_level.add(neighbor_id)
+                                nearby_edges.add(neighbor_id)
+                    for neighbor in edge.getIncoming():
+                        if neighbor.allows("passenger"):
+                            neighbor_id = neighbor.getID()
+                            if neighbor_id not in nearby_edges:
+                                next_level.add(neighbor_id)
+                                nearby_edges.add(neighbor_id)
+                except:
+                    pass
+            current_level = next_level
+            if not current_level:
+                break
+        
         return list(nearby_edges)
     
     def _spawn_background_vehicles(self):
@@ -377,7 +409,14 @@ class SUMODrivingEnv(gym.Env):
             self._try_spawn_one_vehicle(nearby_edges)
     
     def _try_spawn_one_vehicle(self, nearby_edges: List[str] = None) -> bool:
-        """尝试在自车附近生成一辆背景车"""
+        """
+        尝试在自车附近生成一辆背景车（V2.3优化版）
+        
+        改进：
+        - 先创建路由再添加车辆，避免幽灵车
+        - 每条边最多3辆车，避免堆积
+        - 70%概率在非ego路线生成，增加转弯避障场景
+        """
         self._ensure_connection()
         
         if nearby_edges is None:
@@ -391,10 +430,31 @@ class SUMODrivingEnv(gym.Env):
         except:
             return False
         
-        max_attempts = 30  # 增加重试次数 10 -> 30
+        # 方案3：将边分为 ego 路线和其他路线
+        ego_route_edges = [e for e in nearby_edges if e in self.route_edges]
+        other_edges = [e for e in nearby_edges if e not in self.route_edges]
+        
+        max_attempts = 30
         for attempt in range(max_attempts):
             try:
-                edge_id = random.choice(nearby_edges)
+                # 方案3：70% 概率选其他路线，30% 选 ego 路线
+                if other_edges and random.random() < 0.7:
+                    edge_id = random.choice(other_edges)
+                elif ego_route_edges:
+                    edge_id = random.choice(ego_route_edges)
+                else:
+                    edge_id = random.choice(nearby_edges)
+                
+                # 方案2：检查这条边上已有几辆车，最多3辆
+                try:
+                    vehicles_on_edge = traci.edge.getLastStepVehicleIDs(edge_id)
+                    # 过滤掉 ego 车辆
+                    bg_on_edge = [v for v in vehicles_on_edge if v != self.ego_id]
+                    if len(bg_on_edge) >= 3:
+                        continue  # 这条边已经有3辆车了，换一条
+                except:
+                    pass  # 查询失败就继续，不阻塞生成
+                
                 edge = self.net.getEdge(edge_id)
                 
                 lane = edge.getLane(0)
@@ -414,12 +474,9 @@ class SUMODrivingEnv(gym.Env):
                 veh_id = f"bg_{self.bg_vehicle_counter}"
                 self.bg_vehicle_counter += 1
                 
-                # 修复：终点也从nearby_edges选，而不是全图
-                goal_edge = random.choice(nearby_edges)
-                
-                # 增加路由验证重试
+                # 先验证路由可行性
                 route_ids = None
-                for route_attempt in range(5):  # 最多尝试5个不同终点
+                for route_attempt in range(5):
                     try:
                         goal_edge = random.choice(nearby_edges)
                         route = self.net.getShortestPath(edge, self.net.getEdge(goal_edge))[0]
@@ -429,47 +486,26 @@ class SUMODrivingEnv(gym.Env):
                     except:
                         continue
                 
-                # 如果找不到路由，跳过这次生成尝试
                 if route_ids is None or len(route_ids) == 0:
                     continue
                 
+                # 关键修复：先创建路由，再添加车辆
+                route_id = f"route_bg_{self.bg_vehicle_counter}"
                 try:
+                    traci.route.add(route_id, route_ids)
                     traci.vehicle.add(
                         vehID=veh_id,
-                        routeID="",
+                        routeID=route_id,
                         typeID="background",
                         depart="now",
                         departLane="random",
                         departSpeed="random"
                     )
-                    
-                    # 使用os层面的stderr重定向（抑制TraCI C++错误输出）
-                    import sys
-                    import os
-                    
-                    # 保存原始stderr文件描述符
-                    stderr_fd = sys.stderr.fileno()
-                    saved_stderr_fd = os.dup(stderr_fd)
-                    
-                    try:
-                        # 重定向stderr到null
-                        devnull = os.open(os.devnull, os.O_WRONLY)
-                        os.dup2(devnull, stderr_fd)
-                        os.close(devnull)
-                        
-                        # 执行可能输出错误的操作
-                        traci.vehicle.setRoute(veh_id, route_ids)
-                    finally:
-                        # 恢复stderr
-                        os.dup2(saved_stderr_fd, stderr_fd)
-                        os.close(saved_stderr_fd)
-                    
                     self.active_bg_vehicles.add(veh_id)
                     return True
                 except:
-                    # setRoute失败，删除已添加的车辆
                     try:
-                        traci.vehicle.remove(veh_id)
+                        traci.route.remove(route_id)
                     except:
                         pass
                     continue
@@ -480,7 +516,7 @@ class SUMODrivingEnv(gym.Env):
         return False
     
     def _update_background_vehicles(self):
-        """动态更新背景车辆：移除远离的，生成新的"""
+        """动态更新背景车辆（修复版：移除到达终点的车，降低生成频率）"""
         if self.num_background_vehicles == 0:
             return
         
@@ -501,19 +537,38 @@ class SUMODrivingEnv(gym.Env):
                 veh_pos = np.array(traci.vehicle.getPosition(veh_id))
                 distance = np.linalg.norm(veh_pos - ego_pos)
                 
+                # 条件1: 距离超过消失距离
                 if distance > self.VEHICLE_DESPAWN:
                     traci.vehicle.remove(veh_id)
                     vehicles_to_remove.append(veh_id)
+                    continue
+                
+                # 条件2: 车辆已到达路线终点（关键修复）
+                try:
+                    route_index = traci.vehicle.getRouteIndex(veh_id)
+                    route = traci.vehicle.getRoute(veh_id)
+                    lane_pos = traci.vehicle.getLanePosition(veh_id)
+                    
+                    if route and route_index >= len(route) - 1:
+                        edge_id = route[-1]
+                        edge_length = traci.lane.getLength(f"{edge_id}_0")
+                        if lane_pos > edge_length - 5:  # 接近终点
+                            traci.vehicle.remove(veh_id)
+                            vehicles_to_remove.append(veh_id)
+                            continue
+                except:
+                    pass
+                    
             except:
                 vehicles_to_remove.append(veh_id)
         
         for veh_id in vehicles_to_remove:
             self.active_bg_vehicles.discard(veh_id)
         
-        nearby_edges = self._get_nearby_edges()
-        while len(self.active_bg_vehicles) < self.num_background_vehicles:
-            if not self._try_spawn_one_vehicle(nearby_edges):
-                break
+        # 每步尝试生成一辆新车（V2.3调整：从每5步改为每步）
+        if len(self.active_bg_vehicles) < self.num_background_vehicles:
+            nearby_edges = self._get_nearby_edges()
+            self._try_spawn_one_vehicle(nearby_edges)
     
     def _spawn_pedestrians(self):
         """初始生成行人"""
@@ -1463,7 +1518,7 @@ def make_sumo_env(stage: int, map_name: str = "sf_mission", **kwargs):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("SUMO自动驾驶环境 V2.1 (红绿灯修复版)")
+    print("SUMO自动驾驶环境 V2.3 (背景车辆分布优化版)")
     print("=" * 60)
     
     if 'SUMO_HOME' not in os.environ:
@@ -1471,17 +1526,16 @@ if __name__ == "__main__":
         sys.exit(1)
     
     print(f"SUMO_HOME: {os.environ['SUMO_HOME']}")
-    print("\n📐 观测空间: 103维 (修复版)")
+    print("\n📐 观测空间: 103维")
     print("   - 自车状态: 8维")
     print("   - 周围车辆: 12辆 × 6维 = 72维")
     print("   - 行人: 4个 × 4维 = 16维")
     print("   - 红绿灯: 5维 (含剩余时间)")
     print("   - 路由: 2维")
-    print("\n🔧 修复内容:")
-    print("   - 红绿灯观测距离扩大到200米")
-    print("   - 添加红绿灯剩余时间信息")
-    print("   - 持续跟踪红绿灯状态，防止高速跳过检测")
-    print("   - 渐进式减速奖励")
+    print("\n🔧 V2.3 优化内容:")
+    print("   - 扩大生成范围：2跳邻居边")
+    print("   - 每条边最多3辆车")
+    print("   - 70%在其他路线，30%在ego路线")
     print("\n动态背景车: 50-150m生成, >200m消失")
     print("动态行人: 30-80m生成, >100m消失")
     print("\n使用前请先下载地图:")
