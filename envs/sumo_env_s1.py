@@ -19,7 +19,6 @@ Stage 4: 综合场景 - 行人 + 长距离导航
 
 import os
 import sys
-import uuid
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -108,8 +107,7 @@ class SUMODrivingEnv(gym.Env):
         self.sumo_cmd = None
         self.sumo_running = False
         self.net = None
-        # 使用uuid确保绝对唯一的ego_id
-        self.ego_id = f"ego_{uuid.uuid4().hex[:12]}"
+        self.ego_id = "ego"
         
         # Episode状态
         self.current_step = 0
@@ -224,19 +222,12 @@ class SUMODrivingEnv(gym.Env):
         
         sumo_binary = "sumo-gui" if self.use_gui else "sumo"
         
-        # Windows用NUL，Linux/Mac用/dev/null
-        error_log = "NUL" if sys.platform == "win32" else "/dev/null"
-        
         self.sumo_cmd = [
             sumo_binary,
             "-n", self.net_file,
             "--step-length", str(self.step_length),
             "--no-warnings", "true",
             "--no-step-log", "true",
-            "--error-log", error_log,  # 隐藏错误输出
-            "--message-log", error_log,  # 隐藏消息输出
-            "-v", "false",  # 关闭详细输出
-            "--duration-log.disable", "true",  # 关闭持续时间日志
             "--time-to-teleport", "-1",
             "--collision.action", "warn",
             "--start", "true" if self.use_gui else "false",
@@ -307,36 +298,38 @@ class SUMODrivingEnv(gym.Env):
         return start_edge.getID(), goal_edge.getID(), [start_edge.getID(), goal_edge.getID()], 100.0
     
     def _spawn_ego_vehicle(self):
-        # 切换到正确的连接
-        traci.switch(self.connection_label)
-        
-        # 确保vehicletype存在
-        vtype_id = "ego_type"
-        if vtype_id not in traci.vehicletype.getIDList():
-            traci.vehicletype.copy("DEFAULT_VEHTYPE", vtype_id)
-            traci.vehicletype.setAccel(vtype_id, 2.6)
-            traci.vehicletype.setDecel(vtype_id, 4.5)
-            traci.vehicletype.setMaxSpeed(vtype_id, 15.0)
-            traci.vehicletype.setColor(vtype_id, (0, 255, 0, 255))
-        
-        # 添加车辆
-        traci.vehicle.add(
-            vehID=self.ego_id,
-            routeID="",
-            typeID=vtype_id,
-            depart="now",
-            departLane="best",
-            departSpeed="0"
-        )
-        
-        # 设置路由
+        self._ensure_connection()
         try:
-            traci.vehicle.setRoute(self.ego_id, self.route_edges)
-        except Exception as route_err:
-            traci.vehicle.setRoute(self.ego_id, [self.route_edges[0]])
-        
-        traci.vehicle.setSpeedMode(self.ego_id, 0)
-        traci.vehicle.setLaneChangeMode(self.ego_id, 0)
+            if self.ego_id in traci.vehicle.getIDList():
+                traci.vehicle.remove(self.ego_id)
+            
+            if self.ego_id not in traci.vehicletype.getIDList():
+                traci.vehicletype.copy("DEFAULT_VEHTYPE", self.ego_id)
+                traci.vehicletype.setAccel(self.ego_id, 2.6)
+                traci.vehicletype.setDecel(self.ego_id, 4.5)
+                traci.vehicletype.setMaxSpeed(self.ego_id, 15.0)
+                traci.vehicletype.setColor(self.ego_id, (0, 255, 0, 255))
+            
+            traci.vehicle.add(
+                vehID=self.ego_id,
+                routeID="",
+                typeID=self.ego_id,
+                depart="now",
+                departLane="best",
+                departSpeed="0"
+            )
+            
+            try:
+                traci.vehicle.setRoute(self.ego_id, self.route_edges)
+            except Exception as route_err:
+                traci.vehicle.setRoute(self.ego_id, [self.route_edges[0]])
+            
+            traci.vehicle.setSpeedMode(self.ego_id, 0)
+            traci.vehicle.setLaneChangeMode(self.ego_id, 0)
+            
+        except Exception as e:
+            print(f"生成ego车辆失败: {e}")
+            raise
     
     def _get_nearby_edges(self) -> List[str]:
         """获取自车路线附近的所有边"""
@@ -383,7 +376,7 @@ class SUMODrivingEnv(gym.Env):
         if nearby_edges is None:
             nearby_edges = self._get_nearby_edges()
         
-        if not nearby_edges or len(nearby_edges) < 2:
+        if not nearby_edges:
             return False
         
         try:
@@ -391,8 +384,8 @@ class SUMODrivingEnv(gym.Env):
         except:
             return False
         
-        max_attempts = 30  # 增加重试次数 10 -> 30
-        for attempt in range(max_attempts):
+        max_attempts = 10
+        for _ in range(max_attempts):
             try:
                 edge_id = random.choice(nearby_edges)
                 edge = self.net.getEdge(edge_id)
@@ -414,65 +407,30 @@ class SUMODrivingEnv(gym.Env):
                 veh_id = f"bg_{self.bg_vehicle_counter}"
                 self.bg_vehicle_counter += 1
                 
-                # 修复：终点也从nearby_edges选，而不是全图
-                goal_edge = random.choice(nearby_edges)
-                
-                # 增加路由验证重试
-                route_ids = None
-                for route_attempt in range(5):  # 最多尝试5个不同终点
-                    try:
-                        goal_edge = random.choice(nearby_edges)
-                        route = self.net.getShortestPath(edge, self.net.getEdge(goal_edge))[0]
-                        if route and len(route) > 0:
-                            route_ids = [e.getID() for e in route]
-                            break
-                    except:
-                        continue
-                
-                # 如果找不到路由，跳过这次生成尝试
-                if route_ids is None or len(route_ids) == 0:
-                    continue
+                all_edges = [e.getID() for e in self.net.getEdges() 
+                            if not e.isSpecial() and e.allows("passenger")]
+                goal_edge = random.choice(all_edges)
                 
                 try:
-                    traci.vehicle.add(
-                        vehID=veh_id,
-                        routeID="",
-                        typeID="background",
-                        depart="now",
-                        departLane="random",
-                        departSpeed="random"
-                    )
-                    
-                    # 使用os层面的stderr重定向（抑制TraCI C++错误输出）
-                    import sys
-                    import os
-                    
-                    # 保存原始stderr文件描述符
-                    stderr_fd = sys.stderr.fileno()
-                    saved_stderr_fd = os.dup(stderr_fd)
-                    
-                    try:
-                        # 重定向stderr到null
-                        devnull = os.open(os.devnull, os.O_WRONLY)
-                        os.dup2(devnull, stderr_fd)
-                        os.close(devnull)
-                        
-                        # 执行可能输出错误的操作
-                        traci.vehicle.setRoute(veh_id, route_ids)
-                    finally:
-                        # 恢复stderr
-                        os.dup2(saved_stderr_fd, stderr_fd)
-                        os.close(saved_stderr_fd)
-                    
-                    self.active_bg_vehicles.add(veh_id)
-                    return True
+                    route = self.net.getShortestPath(edge, self.net.getEdge(goal_edge))[0]
+                    if route:
+                        route_ids = [e.getID() for e in route]
+                    else:
+                        route_ids = [edge_id]
                 except:
-                    # setRoute失败，删除已添加的车辆
-                    try:
-                        traci.vehicle.remove(veh_id)
-                    except:
-                        pass
-                    continue
+                    route_ids = [edge_id]
+                
+                traci.vehicle.add(
+                    vehID=veh_id,
+                    routeID="",
+                    typeID="background",
+                    depart="now",
+                    departLane="random",
+                    departSpeed="random"
+                )
+                traci.vehicle.setRoute(veh_id, route_ids)
+                self.active_bg_vehicles.add(veh_id)
+                return True
                 
             except Exception as e:
                 continue
@@ -631,17 +589,24 @@ class SUMODrivingEnv(gym.Env):
         if seed is not None:
             self.seed(seed)
         
-        # 每次reset都重启SUMO，确保干净状态
-        if self.sumo_running:
-            self._close_sumo()
-        self._start_sumo()
+        if not self.sumo_running:
+            self._start_sumo()
+        else:
+            self._ensure_connection()
+            for veh_id in traci.vehicle.getIDList():
+                try:
+                    traci.vehicle.remove(veh_id)
+                except:
+                    pass
+            for ped_id in traci.person.getIDList():
+                try:
+                    traci.person.remove(ped_id)
+                except:
+                    pass
         
         # 重置动态管理状态
         self.active_bg_vehicles = set()
         self.active_pedestrians = set()
-        
-        # 统计每步的背景车数量
-        self.bg_vehicle_counts = []
         
         self.start_edge, self.goal_edge, self.route_edges, self.route_length = \
             self._select_random_route()
@@ -675,7 +640,7 @@ class SUMODrivingEnv(gym.Env):
         
         self.route_traffic_lights = self._count_route_traffic_lights()
         
-        extra_steps = self.route_traffic_lights * 50
+        extra_steps = self.route_traffic_lights * 80
         self.dynamic_max_steps = self.max_episode_steps + extra_steps
         
         self._spawn_ego_vehicle()
@@ -717,9 +682,6 @@ class SUMODrivingEnv(gym.Env):
         self._update_background_vehicles()
         self._update_pedestrians()
         
-        # 记录当前背景车数量
-        self.bg_vehicle_counts.append(len(self.active_bg_vehicles))
-        
         terminated = self._check_terminated()
         obs = self._get_observation()
         reward = self._compute_reward()
@@ -732,8 +694,8 @@ class SUMODrivingEnv(gym.Env):
         
         truncated = self.current_step >= getattr(self, 'dynamic_max_steps', self.max_episode_steps)
         if truncated and not self.goal_reached:
-            reward = -1000.0 - self.total_reward
-            self.total_reward = -1000.0
+            reward = -150.0 - self.total_reward
+            self.total_reward = -150.0
         
         info = self._get_info()
         
@@ -1152,48 +1114,12 @@ class SUMODrivingEnv(gym.Env):
                         ego_pos = np.array(traci.vehicle.getPosition(self.ego_id))
                         distance = np.linalg.norm(front_pos - ego_pos)
                         
-                        # 检测是否在红绿灯附近（放宽车距要求）
-                        is_near_traffic_light = False
-                        tls_distance = 999
-                        if self.stage >= 2:
-                            # 反归一化红绿灯距离
-                            normalized_distance = tls_state[0]
-                            is_red = tls_state[1] > 0.5
-                            is_yellow = tls_state[2] > 0.5
-                            
-                            if normalized_distance <= 0.25:
-                                tls_distance = normalized_distance / 0.25 * 50
-                            elif normalized_distance <= 0.5:
-                                tls_distance = 50 + (normalized_distance - 0.25) / 0.25 * 50
-                            else:
-                                tls_distance = 100 + (normalized_distance - 0.5) / 0.5 * 100
-                            
-                            # 在红绿灯50米内且是红灯/黄灯时，认为是排队等待
-                            if tls_distance < 50 and (is_red or is_yellow):
-                                is_near_traffic_light = True
+                        safe_distance = max(speed * 2, 5)
                         
-                        # 根据是否在红绿灯附近使用不同的车距标准
-                        if is_near_traffic_light:
-                            # 红绿灯附近：放宽标准（允许更近的跟车）
-                            if distance < 2.0:
-                                reward -= 10.0  # 极度危险
-                            elif distance < 3.0:
-                                reward -= 3.0  # 太近但可容忍
-                            elif distance < 5.0:
-                                reward -= 0.5  # 略近
-                            elif distance < 15.0:
-                                reward += 0.5  # 合理排队距离
-                        else:
-                            # 正常路段：标准车距要求
-                            if distance < 3.0:
-                                reward -= 10.0  # 极度危险
-                            elif distance < 5.0:
-                                reward -= 5.0  # 太近
-                            elif distance < 10.0:
-                                reward -= 1.0  # 偏近
-                            elif distance < 20.0:
-                                reward += 0.5  # 保持安全距离
-                        # distance >= 20m: 无额外奖惩
+                        if distance < safe_distance:
+                            reward -= (safe_distance - distance) * 0.1
+                        elif distance < safe_distance * 2:
+                            reward += 0.1
                     except:
                         pass
             
@@ -1302,7 +1228,7 @@ class SUMODrivingEnv(gym.Env):
                 else:
                     # 闯红灯检测
                     if current_tls and current_tls not in self.passed_traffic_lights:
-                        reward -= 200.0  # 降低惩罚，让模型优先避免超时
+                        reward -= 600.0  # 大幅提高惩罚
                         self.stats["red_light_violations"] += 1
                         self.passed_traffic_lights.add(current_tls)
         
@@ -1385,9 +1311,6 @@ class SUMODrivingEnv(gym.Env):
         return False
     
     def _get_info(self) -> Dict:
-        # 计算平均背景车数量
-        avg_bg_vehicles = np.mean(self.bg_vehicle_counts) if self.bg_vehicle_counts else 0.0
-        
         info = {
             "ep_count": self.episode_count,
             "step": self.current_step,
@@ -1401,7 +1324,6 @@ class SUMODrivingEnv(gym.Env):
             "route_traffic_lights": getattr(self, 'route_traffic_lights', 0),
             "max_steps": getattr(self, 'dynamic_max_steps', self.max_episode_steps),
             "active_vehicles": len(self.active_bg_vehicles),
-            "avg_bg_vehicles": avg_bg_vehicles,
             "active_pedestrians": len(self.active_pedestrians),
             **self.stats,
         }
@@ -1442,9 +1364,9 @@ def make_sumo_env(stage: int, map_name: str = "sf_mission", **kwargs):
             "min_route_length": 200.0, "max_route_length": 500.0},
         2: {"num_background_vehicles": 0, "num_pedestrians": 0, "max_episode_steps": 1500,
             "min_route_length": 600.0, "max_route_length": 1200.0},
-        3: {"num_background_vehicles": 8, "num_pedestrians": 0, "max_episode_steps": 1500,
+        3: {"num_background_vehicles": 15, "num_pedestrians": 0, "max_episode_steps": 1500,
             "min_route_length": 600.0, "max_route_length": 1200.0},
-        4: {"num_background_vehicles": 12, "num_pedestrians": 5, "max_episode_steps": 2000,
+        4: {"num_background_vehicles": 20, "num_pedestrians": 10, "max_episode_steps": 2000,
             "min_route_length": 800.0, "max_route_length": 1500.0},
     }
     

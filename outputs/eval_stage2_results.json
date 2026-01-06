@@ -1,15 +1,15 @@
 {
   "stage": 2,
   "n_episodes": 100,
-  "success_rate": 89.0,
+  "success_rate": 0.0,
   "collision_rate": 0.0,
-  "mean_reward": 202.36586901232076,
-  "std_reward": 189.0131422845944,
-  "min_reward": -153.949951171875,
-  "max_reward": 1353.8564403718785,
-  "mean_length": 390.93,
-  "std_length": 311.4157110680192,
-  "mean_progress": 90.06654936727396,
-  "mean_red_light_violations": 0.04,
-  "total_red_light_violations": 4
+  "mean_reward": -122.41385841979984,
+  "std_reward": 25.0351131360736,
+  "min_reward": -155.41748046875,
+  "max_reward": -99.43,
+  "mean_length": 783.62,
+  "std_length": 653.0919656526175,
+  "mean_progress": 0.5735816966828735,
+  "mean_red_light_violations": 0.0,
+  "total_red_light_violations": 0
 }

@@ -196,7 +196,8 @@ class EvalCallback(BaseCallback):
                 print(f"  Episode {ep+1}: Reward={ep_reward:.2f}, Steps={ep_steps}/{info.get('max_steps', '?')}, "
                       f"Success={info.get('goal_reached', False)}, "
                       f"Collision={info.get('collision', False)}, "
-                      f"RedLight={info.get('red_light_violations', 0)}/{info.get('route_traffic_lights', '?')}")
+                      f"RedLight={info.get('red_light_violations', 0)}/{info.get('route_traffic_lights', '?')}, "
+                      f"BgVehicles={info.get('avg_bg_vehicles', 0):.1f}")
             
             mean_reward = np.mean(episode_rewards)
             success_rate = np.mean(episode_successes) * 100
@@ -284,10 +285,10 @@ def create_or_load_model(
         model = PPO(
             "MlpPolicy",
             env,
-            learning_rate=3e-4,
+            learning_rate=3e-4,  # 恢复原始学习率
             n_steps=2048,
-            batch_size=64,
-            n_epochs=10,
+            batch_size=128,
+            n_epochs=5,
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.2,
@@ -308,10 +309,10 @@ def create_or_load_model(
             model = PPO(
                 "MlpPolicy",
                 env,
-                learning_rate=3e-4,
+                learning_rate=3e-4,  # 恢复原始学习率
                 n_steps=2048,
-                batch_size=64,
-                n_epochs=10,
+                batch_size=128,
+                n_epochs=5,
                 gamma=0.99,
                 gae_lambda=0.95,
                 clip_range=0.2,
@@ -365,7 +366,7 @@ def main():
     
     # 设置默认参数
     if args.timesteps is None:
-        default_timesteps = {1: 500000, 2: 800000, 3: 1000000, 4: 1500000}
+        default_timesteps = {1: 500000, 2: 1000000, 3: 1500000, 4: 2000000}
         args.timesteps = default_timesteps[args.stage]
     
     if args.n_envs is None:
@@ -453,7 +454,7 @@ def main():
     )
     
     checkpoint_callback = CheckpointCallback(
-        save_freq=args.checkpoint_freq,
+        save_freq=max(args.checkpoint_freq // args.n_envs, 1),  # 修复：需要除以环境数
         save_path=str(REPO_DIR / "outputs" / "models" / f"best_stage{args.stage}"),
         name_prefix=f"ppo_stage{args.stage}",
         verbose=1
